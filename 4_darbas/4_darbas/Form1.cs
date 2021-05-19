@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Text;
 using System.Windows.Forms;
 
 namespace _4_darbas
@@ -16,6 +17,7 @@ namespace _4_darbas
             InitializeComponent();
             try
             {
+
                 if (File.Exists(path + "\\Magic.txt.aes"))
                 {
                     Decrypt(path + "\\Magic.txt.aes", password);
@@ -23,7 +25,7 @@ namespace _4_darbas
                 }
                 else
                 {
-                    File.Create(path + "\\Magic.txt");
+                    File.Create(path + "\\Magic.txt").Close();
                 }
             }
             catch (Exception ex)
@@ -50,7 +52,7 @@ namespace _4_darbas
             byte[] salt = GenerateRandomSalt();
 
             //create output file name
-            FileStream fsCrypt = new FileStream(inputFile + ".aes", FileMode.Create);
+            using FileStream fsCrypt = new FileStream(inputFile + ".aes", FileMode.Create);
 
             //convert password string to byte arrray
             byte[] passwordBytes = System.Text.Encoding.UTF8.GetBytes(password);
@@ -175,5 +177,71 @@ namespace _4_darbas
             return data;
         }
 
+        private void button1_Click(object sender, EventArgs e)
+        {
+            if (!String.IsNullOrWhiteSpace(Comment_txt.Text) &&
+                !String.IsNullOrWhiteSpace(Name_txt.Text) &&
+                !String.IsNullOrWhiteSpace(Password_txt.Text) &&
+                !String.IsNullOrWhiteSpace(URL_App_txt.Text)
+                )
+            {
+                using (StreamWriter w = File.AppendText(path + "\\Magic.txt"))
+                {
+                    w.WriteLine(String.Format("{0} {1} {2} {3}\n", Name_txt.Text.ToString(), EncryptText(Password_txt.Text.ToString(), Encoding.UTF8.GetBytes("ananasasananasas")), URL_App_txt.Text.ToString(), Comment_txt.Text.ToString()));
+                    MessageBox.Show("sėkmingai išsaugota");
+                    Comment_txt.Text = "";
+                    Name_txt.Text = "";
+                    Password_txt.Text = "";
+                    URL_App_txt.Text = "";
+                }
+            }
+            else
+            {
+                MessageBox.Show("Visi langai turi būti užpildyti");
+            }
+        }
+
+        private string EncryptText(string text, byte[] key)
+        {
+            // Nesifruotas tekstaspaverciamas i baitus
+            byte[] tekstas = Encoding.UTF8.GetBytes(text);
+            RijndaelManaged aes = new RijndaelManaged();
+            // Modas ecb
+            aes.Mode = CipherMode.ECB;
+            aes.Padding = PaddingMode.PKCS7;
+            aes.KeySize = 128;
+
+            // Sukuria sifratoriu
+            using (ICryptoTransform sifratorius = aes.CreateEncryptor(key, null))
+            {
+                // Sifruojam teksta
+                byte[] sifruotasTekstas = sifratorius.TransformFinalBlock(tekstas, 0, tekstas.Length);
+                // Nutraukiam darba
+                sifratorius.Dispose();
+                // Grazinam sifruota teksta string formatu
+                return Convert.ToBase64String(sifruotasTekstas);
+            }
+        }
+        private string DecryptText(string text, byte[] key)
+        {
+            // Konvertuoja teksta i baitus
+            byte[] sifruotasTekstas = Convert.FromBase64String(text);
+            RijndaelManaged aes = new RijndaelManaged();
+            // Nustatom rakto dydi
+            aes.KeySize = 128;
+            aes.Padding = PaddingMode.PKCS7;
+            // Nuastatom moda i ecb
+            aes.Mode = CipherMode.ECB;
+
+            // Sukuria desifratoriu
+            using (ICryptoTransform desifratorius = aes.CreateDecryptor(key, null))
+            {
+                byte[] desifruotasTekstas = desifratorius.TransformFinalBlock(sifruotasTekstas, 0, sifruotasTekstas.Length);
+                // Nutraukia desifravimo darba
+                desifratorius.Dispose();
+                // Grazinam Desifruota teksta string formatu
+                return Encoding.UTF8.GetString(desifruotasTekstas);
+            }
+        }
     }
 }
