@@ -1,207 +1,130 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Windows.Forms;
-
-namespace _4_darbas
+namespace _2_Darbas_AES
 {
     public partial class Form1 : Form
     {
-        string password = "Test";
-        string path = "C:\\Users\\Hunter\\Desktop\\IS\\Testinis Folderis";
         public Form1()
         {
             InitializeComponent();
-            try
-            {
-
-                if (File.Exists(path + "\\Magic.txt.aes"))
-                {
-                    Decrypt(path + "\\Magic.txt.aes", password);
-                    File.Delete(path + "\\Magic.txt.aes");
-                }
-                else
-                {
-                    File.Create(path + "\\Magic.txt").Close();
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex.Message);
-            }
         }
-        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+
+        private void Sifravimo_btn_Click(object sender, EventArgs e)
         {
-            try
-            {
-                Encrypt(path + "\\Magic.txt", password);
-                File.Delete(path + "\\Magic.txt");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex.Message);
-            }
+            // Paimam teksta is textbox
+            string originalus = Teksats_txt.Text;
+            // Priskiriam textboxui sifruota teksta 
+            STekstas_txt.Text =
+            Sifruojam(originalus);
+        }
+        private void Desifravimo_btn_Click(object sender, EventArgs e)
+        {
+            // Paimam teksta is textbox
+            string originalus = STekstas_txt.Text;
+            // Priskiriam textboxui sifruota teksta 
+            Teksats_txt.Text =
+            Desifruojam(originalus);
+        }
+        private void FailoIrasymas_btn_Click(object sender, EventArgs e)
+        {
+            string originalus = Teksats_txt.Text;
+            IssaugojimasFaile(Sifruojam(originalus));
         }
 
-        private void Encrypt(string inputFile, string password)
+        private void FailoSkaitymas_btn_Click(object sender, EventArgs e)
         {
-            //generate random salt
-            byte[] salt = GenerateRandomSalt();
-
-            //create output file name
-            using FileStream fsCrypt = new FileStream(inputFile + ".aes", FileMode.Create);
-
-            //convert password string to byte arrray
-            byte[] passwordBytes = System.Text.Encoding.UTF8.GetBytes(password);
-
-            //Set Rijndael symmetric encryption algorithm
-            RijndaelManaged AES = new RijndaelManaged();
-            AES.KeySize = 256;
-            AES.BlockSize = 128;
-            AES.Padding = PaddingMode.PKCS7;
-
-            //"What it does is repeatedly hash the user password along with the salt." High iteration counts.
-            var key = new Rfc2898DeriveBytes(passwordBytes, salt, 50000);
-            AES.Key = key.GetBytes(AES.KeySize / 8);
-            AES.IV = key.GetBytes(AES.BlockSize / 8);
-
-            AES.Mode = CipherMode.CFB;
-
-            // write salt to the begining of the output file, so in this case can be random every time
-            fsCrypt.Write(salt, 0, salt.Length);
-
-            CryptoStream cs = new CryptoStream(fsCrypt, AES.CreateEncryptor(), CryptoStreamMode.Write);
-
-            FileStream fsIn = new FileStream(inputFile, FileMode.Open);
-
-            //create a buffer (1mb) so only this amount will allocate in the memory and not the whole file
-            byte[] buffer = new byte[1048576];
-            int read;
-
-            try
-            {
-                while ((read = fsIn.Read(buffer, 0, buffer.Length)) > 0)
-                {
-                    Application.DoEvents(); // -> for responsive GUI, using Task will be better!
-                    cs.Write(buffer, 0, read);
-                }
-
-                // Close up
-                fsIn.Close();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error: " + ex.Message);
-            }
-            finally
-            {
-                cs.Close();
-                fsCrypt.Close();
-            }
+            string originalus = FailoSkaitymas();
+            Teksats_txt.Text = Desifruojam(originalus);
         }
-
-        private void Decrypt(string inputFile, string password)
+        static string SifruojamTekstaIBaitus_CBC(string tekstas, byte[] Key)
         {
-            byte[] passwordBytes = System.Text.Encoding.UTF8.GetBytes(password);
-            byte[] salt = new byte[32];
+            byte[] sifras;
+            byte[] IV;
 
-            FileStream fsCrypt = new FileStream(inputFile, FileMode.Open);
-            fsCrypt.Read(salt, 0, salt.Length);
-
-            RijndaelManaged AES = new RijndaelManaged();
-            AES.KeySize = 256;
-            AES.BlockSize = 128;
-            var key = new Rfc2898DeriveBytes(passwordBytes, salt, 50000);
-            AES.Key = key.GetBytes(AES.KeySize / 8);
-            AES.IV = key.GetBytes(AES.BlockSize / 8);
-            AES.Padding = PaddingMode.PKCS7;
-            AES.Mode = CipherMode.CFB;
-            string outputFile = inputFile.Substring(0, inputFile.Length - 4);
-
-            CryptoStream cs = new CryptoStream(fsCrypt, AES.CreateDecryptor(), CryptoStreamMode.Read);
-
-            FileStream fsOut = new FileStream(outputFile, FileMode.Create);
-
-            int read;
-            byte[] buffer = new byte[1048576];
-
-            try
+            using (Aes aesAlg = Aes.Create())
             {
-                while ((read = cs.Read(buffer, 0, buffer.Length)) > 0)
+                aesAlg.Key = Key;
+                aesAlg.GenerateIV();
+                IV = aesAlg.IV;
+                aesAlg.Padding = PaddingMode.PKCS7;
+
+                aesAlg.Mode = CipherMode.CBC;
+
+                var encryptor = aesAlg.CreateEncryptor(aesAlg.Key, aesAlg.IV);
+
+                // Sukuria stream sifravimui
+                using (var msEncrypt = new MemoryStream())
                 {
-                    Application.DoEvents();
-                    fsOut.Write(buffer, 0, read);
+                    using (var csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write))
+                    {
+                        using (var swEncrypt = new StreamWriter(csEncrypt))
+                        {
+                            // Paraso visa data i stream
+                            swEncrypt.Write(tekstas);
+                        }
+                        sifras = msEncrypt.ToArray();
+                    }
                 }
             }
-            catch (CryptographicException ex_CryptographicException)
-            {
-                Console.WriteLine("CryptographicException error: " + ex_CryptographicException.Message);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error: " + ex.Message);
-            }
+            // Sifruoja
+            var combinedIvCt = new byte[IV.Length + sifras.Length];
+            Array.Copy(IV, 0, combinedIvCt, 0, IV.Length);
+            Array.Copy(sifras, 0, combinedIvCt, IV.Length, sifras.Length);
 
-            try
-            {
-                cs.Close();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error by closing CryptoStream: " + ex.Message);
-            }
-            finally
-            {
-                fsOut.Close();
-                fsCrypt.Close();
-            }
+            // Grazina sifruota teksta string pavidalu
+            return Convert.ToBase64String(combinedIvCt);
+
         }
-        [DllImport("KERNEL32.DLL", EntryPoint = "RtlZeroMemory")]
-        public static extern bool ZeroMemory(IntPtr Destination, int Length);
-
-        public static byte[] GenerateRandomSalt()
+        static string DesifruojamBaitusITeksta_CBC(string sifruotasTekstas, byte[] Key)
         {
-            byte[] data = new byte[32];
+            byte[] sifruotasTekstasBaitais = Convert.FromBase64String(sifruotasTekstas);
+            string desifruotasTekstas = null;
 
-            using (RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider())
+
+            using (Aes aesAlg = Aes.Create())
             {
-                for (int i = 0; i < 10; i++)
+                // Priskiriam rakta
+                aesAlg.Key = Key;
+                // Sukuriamas vektorius ir nustatomas ilgis
+                byte[] IV = new byte[aesAlg.BlockSize / 8];
+                byte[] sifras = new byte[sifruotasTekstasBaitais.Length - IV.Length];
+
+                // Keicia
+                Array.Copy(sifruotasTekstasBaitais, IV, IV.Length);
+                Array.Copy(sifruotasTekstasBaitais, IV.Length, sifras, 0, sifras.Length);
+
+                // Nustatomas Vektoriaus reiksme
+                aesAlg.IV = IV;
+                // Padingas
+                aesAlg.Padding = PaddingMode.PKCS7;
+                // Modas
+                aesAlg.Mode = CipherMode.CBC;
+
+                // Sukuria desifratoriu
+                ICryptoTransform desifratorius = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);
+
+                // Sukuria stream desifravimui
+                using (var msDecrypt = new MemoryStream(sifras))
                 {
-                    rng.GetBytes(data);
+                    using (var csDecrypt = new CryptoStream(msDecrypt, desifratorius, CryptoStreamMode.Read))
+                    {
+                        using (var srDecrypt = new StreamReader(csDecrypt))
+                        {
+
+                            // Skaito desifruotus baitus is desifravimo stream ir ideda i stringa
+                            desifruotasTekstas = srDecrypt.ReadToEnd();
+                        }
+                    }
                 }
+
             }
 
-            return data;
+            return desifruotasTekstas;
         }
-
-        private void button1_Click(object sender, EventArgs e)
-        {
-            if (!String.IsNullOrWhiteSpace(Comment_txt.Text) &&
-                !String.IsNullOrWhiteSpace(Name_txt.Text) &&
-                !String.IsNullOrWhiteSpace(Password_txt.Text) &&
-                !String.IsNullOrWhiteSpace(URL_App_txt.Text)
-                )
-            {
-                using (StreamWriter w = File.AppendText(path + "\\Magic.txt"))
-                {
-                    w.WriteLine(String.Format("{0} {1} {2} {3}\n", Name_txt.Text.ToString(), EncryptText(Password_txt.Text.ToString(), Encoding.UTF8.GetBytes("ananasasananasas")), URL_App_txt.Text.ToString(), Comment_txt.Text.ToString()));
-                    MessageBox.Show("sėkmingai išsaugota");
-                    Comment_txt.Text = "";
-                    Name_txt.Text = "";
-                    Password_txt.Text = "";
-                    URL_App_txt.Text = "";
-                }
-            }
-            else
-            {
-                MessageBox.Show("Visi langai turi būti užpildyti");
-            }
-        }
-
-        private string EncryptText(string text, byte[] key)
+        private string SifruojamTekstaIBaitus_ECB(string text, byte[] key)
         {
             // Nesifruotas tekstaspaverciamas i baitus
             byte[] tekstas = Encoding.UTF8.GetBytes(text);
@@ -222,7 +145,7 @@ namespace _4_darbas
                 return Convert.ToBase64String(sifruotasTekstas);
             }
         }
-        private string DecryptText(string text, byte[] key)
+        private string DesifruojamBaitusITeksta_ECB(string text, byte[] key)
         {
             // Konvertuoja teksta i baitus
             byte[] sifruotasTekstas = Convert.FromBase64String(text);
@@ -243,5 +166,113 @@ namespace _4_darbas
                 return Encoding.UTF8.GetString(desifruotasTekstas);
             }
         }
+        void IssaugojimasFaile(string tekstas)
+        {
+            using (var sfd = new SaveFileDialog())
+            {
+                sfd.Filter = "txt files (*.txt)|*.txt";
+
+                if (sfd.ShowDialog() == DialogResult.OK)
+                {
+                    File.WriteAllText(sfd.FileName, tekstas);
+                }
+            }
+        }
+        string FailoSkaitymas()
+        {
+            var fileContent = string.Empty;
+            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            {
+                openFileDialog.Filter = "txt files (*.txt)|*.txt";
+                openFileDialog.RestoreDirectory = true;
+
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    var fileStream = openFileDialog.OpenFile();
+
+                    using (StreamReader reader = new StreamReader(fileStream))
+                    {
+                        fileContent = reader.ReadToEnd();
+                    }
+                }
+            }
+            return fileContent;
+        }
+        string Sifruojam(string tekstas)
+        {
+            try
+            {
+                string sifras;
+                string sifravimas;
+                if (Raktas_txt.Text.Length == 16)
+                {
+                    // Suteikiam rakta is text boxo
+                    byte[] key = Encoding.UTF8.GetBytes(Raktas_txt.Text);
+                    if (CBC_rbtn.Checked == true)
+                    {
+                        // Sifruojam 
+                        sifravimas = SifruojamTekstaIBaitus_CBC(tekstas, key);
+                        // Grazinam baitus paversta i string
+                        return sifravimas;
+                    }
+                    else if (ECB_rbtn.Checked == true)
+                    {
+                        //  Sifruojam
+                        sifras = SifruojamTekstaIBaitus_ECB(tekstas, key);
+
+                        return sifras;
+                    }
+                    else
+                        MessageBox.Show("Pasirinkite tarp CBC ir ECB modų");
+                }
+                else
+                    MessageBox.Show(String.Format("Reikia įvesti 16-os simbolių raktą \nĮvedėte tik {0} simbolių/us", Raktas_txt.Text.Length.ToString()));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: {0}", ex.Message);
+            }
+            return null;
+        }
+        string Desifruojam(string tekstas)
+        {
+            try
+            {
+                string desifravimas;
+                if (Raktas_txt.Text.Length == 16)
+                {
+                    // Raktini teksta paverciam i baita
+                    var key = Encoding.UTF8.GetBytes(Raktas_txt.Text);
+                    if (CBC_rbtn.Checked == true)
+                    {
+                        // Gauname desifruota teksta                // Konvertuojam FromBase64String, kad nepaasitekstu reiksmes
+                        desifravimas = DesifruojamBaitusITeksta_CBC(tekstas, key);
+                        // Grazinam verte, kad irasytu i textboxa arba faila
+                        return desifravimas;
+                    }
+                    else if (ECB_rbtn.Checked == true)
+                    {
+                        // PAduoda sifruota teksta ir rakta
+                        desifravimas = DesifruojamBaitusITeksta_ECB(tekstas, key);
+                        // Grazinam verte, kad irasytu i textboxa arba faila
+                        return desifravimas;
+                    }
+                    else
+                    {
+                        MessageBox.Show("Pasirinkite tarp CBC ir ECB modų");
+                    }
+                }
+                else
+                {
+                    MessageBox.Show(String.Format("Reikia įvesti 16-os simbolių raktą \nĮvedėte tik {0} simbolių/us", Raktas_txt.Text.Length.ToString()));
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: {0}", ex.Message);
+            }
+            return null;
+        }
+
     }
 }
