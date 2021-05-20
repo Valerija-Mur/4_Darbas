@@ -236,7 +236,7 @@ namespace _4_darbas
                 return Convert.ToBase64String(sifruotasTekstas);
             }
         }
-        private string DecryptText(string text, byte[] key)
+        private string DecryptText(string text)
         {
             // Konvertuoja teksta i baitus
             byte[] sifruotasTekstas = Convert.FromBase64String(text);
@@ -248,7 +248,7 @@ namespace _4_darbas
             aes.Mode = CipherMode.ECB;
 
             // Sukuria desifratoriu
-            using (ICryptoTransform desifratorius = aes.CreateDecryptor(key, null))
+            using (ICryptoTransform desifratorius = aes.CreateDecryptor(Encoding.UTF8.GetBytes("ananasasananasas"), null))
             {
                 byte[] desifruotasTekstas = desifratorius.TransformFinalBlock(sifruotasTekstas, 0, sifruotasTekstas.Length);
                 // Nutraukia desifravimo darba
@@ -280,20 +280,29 @@ namespace _4_darbas
 
         private void ChangePassword_btn_Click(object sender, EventArgs e)
         {
-            if (!String.IsNullOrWhiteSpace(ChangePassword_txt.Text))
+            try
             {
-                try
+                if (!String.IsNullOrWhiteSpace(ChangePassword_txt.Text))
                 {
-                    string newline = String.Format("{0};{1};{2};{3}",Name_lbl.Text,EncryptText(ChangePassword_txt.Text),URL_lbl.Text,Comment_lbl.Text);
-                    File.WriteAllText(path + "\\Magic.txt", File.ReadAllText(path + "\\Magic.txt").Replace(currentline, newline));
-                    NullLabel();
+                    try
+                    {
+                        string newline = String.Format("{0};{1};{2};{3}", Name_lbl.Text, EncryptText(ChangePassword_txt.Text), URL_lbl.Text, Comment_lbl.Text);
+                        File.WriteAllText(path + "\\Magic.txt", File.ReadAllText(path + "\\Magic.txt").Replace(currentline, newline));
+                        NullLabel();
+                        ShowPassword_btn.Text = "Parodyti slaptažodį";
+                    }
+                    catch { }
                 }
-                catch {}
+                else
+                {
+                    MessageBox.Show("Langelis negali būti tuščias");
+                }
             }
-            else
+            catch
             {
-                MessageBox.Show("Langelis negali būti tuščias");
+                MessageBox.Show("Pasirinkite slaptažodį kuri norite pakeisti");
             }
+            
         }
         void NullLabel()
         {
@@ -309,28 +318,26 @@ namespace _4_darbas
             try
             {
                 File.WriteAllText(path + "\\Magic.txt", File.ReadAllText(path + "\\Magic.txt").Replace(currentline, ""));
+                ShowPassword_btn.Text = "Parodyti slaptažodį";
             }
             catch
             {
                 MessageBox.Show("Pasirinkite slaptažodi kuri norite trinti");
             }
         }
-    }
 
-    class Password
-    {
-        public string name;
-        public string password;
-        public string url;
-        public string comment;
-
-
-        public Password(string name, string password, string url, string comment)
+        private void ShowPassword_btn_Click(object sender, EventArgs e)
         {
-            this.name = name;
-            this.password = password;
-            this.url = url;
-            this.comment = comment;
+            if (ShowPassword_btn.Text== "Parodyti slaptažodį")
+            {
+                ShowPassword_btn.Text = "Paslėpti slaptažodį";
+                Password_lbl.Text = DecryptText(Password_lbl.Text);
+            }
+            else
+            {
+                ShowPassword_btn.Text = "Parodyti slaptažodį";
+                Password_lbl.Text = EncryptText(Password_lbl.Text);
+            }
         }
     }
 }
