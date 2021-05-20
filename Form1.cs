@@ -263,6 +263,28 @@ namespace _4_darbas
                 }
             }
         }
+
+        private void ChangePassword_btn_Click(object sender, EventArgs e)
+        {
+            if (!String.IsNullOrWhiteSpace(ChangePassword_txt.Text))
+            {
+                try
+                {
+                    int id = listView1.FocusedItem.Index;
+                    string line = listView1.Items[id].SubItems[0].Text + ";" + EncryptText(listView1.Items[id].SubItems[1].Text, Encoding.UTF8.GetBytes("ananasasananasas")) + ";" + listView1.Items[id].SubItems[2].Text + ";" + listView1.Items[id].SubItems[3].Text;
+                    string newline = listView1.Items[id].SubItems[0].Text + ";" + EncryptText(ChangePassword_txt.Text, Encoding.UTF8.GetBytes("ananasasananasas")) + ";" + listView1.Items[id].SubItems[2].Text + ";" + listView1.Items[id].SubItems[3].Text;
+                    File.WriteAllText(path + "\\Magic.txt", File.ReadAllText(path + "\\Magic.txt").Replace(line, newline));
+                }
+                catch
+                {
+                    MessageBox.Show("Pasirinkite slaptažodi");
+                }  
+            }
+            else
+            {
+                MessageBox.Show("Langelis negali būti tuščias");
+            }
+        }
     }
 
     class Password
