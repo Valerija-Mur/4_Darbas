@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Windows.Forms;
@@ -12,7 +11,7 @@ namespace _4_darbas
     {
         string password = "Test";
         string path = "C:\\Users\\Hunter\\Desktop\\IS\\Testinis Folderis";
-        string currentline=null;
+        string currentline = null;
         public Form1()
         {
             InitializeComponent();
@@ -182,7 +181,7 @@ namespace _4_darbas
                 !String.IsNullOrWhiteSpace(URL_App_txt.Text)
                 )
             {
-                bool temp=false;
+                bool temp = false;
 
                 string line;
                 using StreamReader file = new StreamReader(path + "\\Magic.txt");
@@ -302,7 +301,7 @@ namespace _4_darbas
             {
                 MessageBox.Show("Pasirinkite slaptažodį kuri norite pakeisti");
             }
-            
+
         }
         void NullLabel()
         {
@@ -328,7 +327,7 @@ namespace _4_darbas
 
         private void ShowPassword_btn_Click(object sender, EventArgs e)
         {
-            if (ShowPassword_btn.Text== "Parodyti slaptažodį")
+            if (ShowPassword_btn.Text == "Parodyti slaptažodį")
             {
                 ShowPassword_btn.Text = "Paslėpti slaptažodį";
                 Password_lbl.Text = DecryptText(Password_lbl.Text);
@@ -338,6 +337,21 @@ namespace _4_darbas
                 ShowPassword_btn.Text = "Parodyti slaptažodį";
                 Password_lbl.Text = EncryptText(Password_lbl.Text);
             }
+        }
+
+        private void RandomPassword_btn_Click(object sender, EventArgs e)
+        {
+            
+            var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            var stringChars = new char[12];
+            var random = new Random();
+
+            for (int i = 0; i < stringChars.Length; i++)
+            {
+                stringChars[i] = chars[random.Next(chars.Length)];
+            }
+
+            Password_txt.Text = new String(stringChars);
         }
     }
 }
