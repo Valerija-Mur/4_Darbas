@@ -13,36 +13,24 @@ namespace _4_darbas
         string path = "C:\\Users\\Hunter\\Desktop\\IS\\Testinis Folderis";
         string currentline = null;
         string passaword = null;
+        bool login = false;
         public Form1()
         {
             InitializeComponent();
-            try
-            {
-                if (File.Exists(path + "\\Magic.txt.aes"))
-                {
-                    Decrypt(path + "\\Magic.txt.aes", password);
-                    File.Delete(path + "\\Magic.txt.aes");
-                }
-                else
-                {
-                    File.Create(path + "\\Magic.txt").Close();
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex.Message);
-            }
         }
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            try
+            if (login)
             {
-                Encrypt(path + "\\Magic.txt", password);
-                File.Delete(path + "\\Magic.txt");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex.Message);
+                try
+                {
+                    Encrypt(path + "\\Magic.txt", password);
+                    File.Delete(path + "\\Magic.txt");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex.Message);
+                }
             }
         }
 
@@ -322,7 +310,7 @@ namespace _4_darbas
             {
                 File.WriteAllText(path + "\\Magic.txt", File.ReadAllText(path + "\\Magic.txt").Replace(currentline, ""));
                 ShowPassword_btn.Text = "Parodyti slaptažodį";
-                void NullLabel();
+                NullLabel();
             }
             catch
             {
@@ -363,6 +351,29 @@ namespace _4_darbas
         {
             if (passaword != null)
                 Clipboard.SetText(DecryptText(passaword));
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                login = true;
+                groupBox1.Visible = false;
+                tabControl1.Visible = true;
+                if (File.Exists(path + "\\Magic.txt.aes"))
+                {
+                    Decrypt(path + "\\Magic.txt.aes", password);
+                    File.Delete(path + "\\Magic.txt.aes");
+                }
+                else
+                {
+                    File.Create(path + "\\Magic.txt").Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+            }
         }
     }
 }
