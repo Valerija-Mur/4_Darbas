@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -249,7 +248,7 @@ namespace _4_darbas
         {
             listView1.Items.Clear();
             string line;
-            using StreamReader file = new StreamReader(path+"\\Magic.txt");
+            using StreamReader file = new StreamReader(path + "\\Magic.txt");
             while ((line = file.ReadLine()) != null)
             {
                 string[] split = line.Split(';');
@@ -278,11 +277,25 @@ namespace _4_darbas
                 catch
                 {
                     MessageBox.Show("Pasirinkite slaptažodi");
-                }  
+                }
             }
             else
             {
                 MessageBox.Show("Langelis negali būti tuščias");
+            }
+        }
+
+        private void DeletePassword_btn_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                int id = listView1.FocusedItem.Index;
+                string line =listView1.Items[id].SubItems[0].Text + ";" + EncryptText(listView1.Items[id].SubItems[1].Text, Encoding.UTF8.GetBytes("ananasasananasas")) + ";" + listView1.Items[id].SubItems[2].Text + ";" + listView1.Items[id].SubItems[3].Text;
+                File.WriteAllText(path + "\\Magic.txt", File.ReadAllText(path + "\\Magic.txt").Replace(line, ""));
+            }
+            catch
+            {
+                MessageBox.Show("Pasirinkite slaptažodi kuri norite trinti");
             }
         }
     }
