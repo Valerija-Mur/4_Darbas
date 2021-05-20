@@ -12,12 +12,12 @@ namespace _4_darbas
     {
         string password = "Test";
         string path = "C:\\Users\\Hunter\\Desktop\\IS\\Testinis Folderis";
+        string currentline=null;
         public Form1()
         {
             InitializeComponent();
             try
             {
-
                 if (File.Exists(path + "\\Magic.txt.aes"))
                 {
                     Decrypt(path + "\\Magic.txt.aes", password);
@@ -159,9 +159,6 @@ namespace _4_darbas
                 fsCrypt.Close();
             }
         }
-        [DllImport("KERNEL32.DLL", EntryPoint = "RtlZeroMemory")]
-        public static extern bool ZeroMemory(IntPtr Destination, int Length);
-
         public static byte[] GenerateRandomSalt()
         {
             byte[] data = new byte[32];
@@ -185,14 +182,31 @@ namespace _4_darbas
                 !String.IsNullOrWhiteSpace(URL_App_txt.Text)
                 )
             {
-                using (StreamWriter w = File.AppendText(path + "\\Magic.txt"))
+                bool temp=false;
+
+                string line;
+                using StreamReader file = new StreamReader(path + "\\Magic.txt");
+                while ((line = file.ReadLine()) != null)
                 {
-                    w.WriteLine(String.Format("{0};{1};{2};{3}", Name_txt.Text.ToString(), EncryptText(Password_txt.Text.ToString(), Encoding.UTF8.GetBytes("ananasasananasas")), URL_App_txt.Text.ToString(), Comment_txt.Text.ToString()));
-                    MessageBox.Show("sėkmingai išsaugota");
-                    Comment_txt.Text = "";
-                    Name_txt.Text = "";
-                    Password_txt.Text = "";
-                    URL_App_txt.Text = "";
+                    string[] split = line.Split(';');
+                    if (split[0] == Name_txt.Text)
+                    {
+                        temp = true;
+                        MessageBox.Show("Pavadinimas toks jau egzistuoja");
+                    }
+                }
+                file.Close();
+                if (!temp)
+                {
+                    using (StreamWriter w = File.AppendText(path + "\\Magic.txt"))
+                    {
+                        w.WriteLine(String.Format("{0};{1};{2};{3}", Name_txt.Text, EncryptText(Password_txt.Text), URL_App_txt.Text, Comment_txt.Text));
+                        MessageBox.Show("sėkmingai išsaugota");
+                        Comment_txt.Text = "";
+                        Name_txt.Text = "";
+                        Password_txt.Text = "";
+                        URL_App_txt.Text = "";
+                    }
                 }
             }
             else
@@ -201,7 +215,7 @@ namespace _4_darbas
             }
         }
 
-        private string EncryptText(string text, byte[] key)
+        private string EncryptText(string text)
         {
             // Nesifruotas tekstaspaverciamas i baitus
             byte[] tekstas = Encoding.UTF8.GetBytes(text);
@@ -212,7 +226,7 @@ namespace _4_darbas
             aes.KeySize = 128;
 
             // Sukuria sifratoriu
-            using (ICryptoTransform sifratorius = aes.CreateEncryptor(key, null))
+            using (ICryptoTransform sifratorius = aes.CreateEncryptor(Encoding.UTF8.GetBytes("ananasasananasas"), null))
             {
                 // Sifruojam teksta
                 byte[] sifruotasTekstas = sifratorius.TransformFinalBlock(tekstas, 0, tekstas.Length);
@@ -246,7 +260,6 @@ namespace _4_darbas
 
         private void FindName_btn_Click(object sender, EventArgs e)
         {
-            listView1.Items.Clear();
             string line;
             using StreamReader file = new StreamReader(path + "\\Magic.txt");
             while ((line = file.ReadLine()) != null)
@@ -254,12 +267,14 @@ namespace _4_darbas
                 string[] split = line.Split(';');
                 if (split[0] == FindName_txt.Text)
                 {
-                    ListViewItem lv = new ListViewItem(split[0]);
-                    lv.SubItems.Add(DecryptText(split[1], Encoding.UTF8.GetBytes("ananasasananasas")));
-                    lv.SubItems.Add(split[2]);
-                    lv.SubItems.Add(split[3]);
-                    listView1.Items.Add(lv);
+                    currentline = line;
+                    Name_lbl.Text = split[0];
+                    Password_lbl.Text = split[1];
+                    URL_lbl.Text = split[2];
+                    Comment_lbl.Text = split[3];
+                    break;
                 }
+                else NullLabel();
             }
         }
 
@@ -269,29 +284,31 @@ namespace _4_darbas
             {
                 try
                 {
-                    int id = listView1.FocusedItem.Index;
-                    string line = listView1.Items[id].SubItems[0].Text + ";" + EncryptText(listView1.Items[id].SubItems[1].Text, Encoding.UTF8.GetBytes("ananasasananasas")) + ";" + listView1.Items[id].SubItems[2].Text + ";" + listView1.Items[id].SubItems[3].Text;
-                    string newline = listView1.Items[id].SubItems[0].Text + ";" + EncryptText(ChangePassword_txt.Text, Encoding.UTF8.GetBytes("ananasasananasas")) + ";" + listView1.Items[id].SubItems[2].Text + ";" + listView1.Items[id].SubItems[3].Text;
-                    File.WriteAllText(path + "\\Magic.txt", File.ReadAllText(path + "\\Magic.txt").Replace(line, newline));
+                    string newline = String.Format("{0};{1};{2};{3}",Name_lbl.Text,EncryptText(ChangePassword_txt.Text),URL_lbl.Text,Comment_lbl.Text);
+                    File.WriteAllText(path + "\\Magic.txt", File.ReadAllText(path + "\\Magic.txt").Replace(currentline, newline));
+                    NullLabel();
                 }
-                catch
-                {
-                    MessageBox.Show("Pasirinkite slaptažodi");
-                }
+                catch {}
             }
             else
             {
                 MessageBox.Show("Langelis negali būti tuščias");
             }
         }
+        void NullLabel()
+        {
+            Name_lbl.Text = null;
+            Password_lbl.Text = null;
+            URL_lbl.Text = null;
+            Comment_lbl.Text = null;
+            currentline = null;
+        }
 
         private void DeletePassword_btn_Click(object sender, EventArgs e)
         {
             try
             {
-                int id = listView1.FocusedItem.Index;
-                string line =listView1.Items[id].SubItems[0].Text + ";" + EncryptText(listView1.Items[id].SubItems[1].Text, Encoding.UTF8.GetBytes("ananasasananasas")) + ";" + listView1.Items[id].SubItems[2].Text + ";" + listView1.Items[id].SubItems[3].Text;
-                File.WriteAllText(path + "\\Magic.txt", File.ReadAllText(path + "\\Magic.txt").Replace(line, ""));
+                File.WriteAllText(path + "\\Magic.txt", File.ReadAllText(path + "\\Magic.txt").Replace(currentline, ""));
             }
             catch
             {
