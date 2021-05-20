@@ -12,6 +12,7 @@ namespace _4_darbas
         string password = "Test";
         string path = "C:\\Users\\Hunter\\Desktop\\IS\\Testinis Folderis";
         string currentline = null;
+        string passaword = null;
         public Form1()
         {
             InitializeComponent();
@@ -269,6 +270,7 @@ namespace _4_darbas
                     currentline = line;
                     Name_lbl.Text = split[0];
                     Password_lbl.Text = split[1];
+                    passaword = split[1];
                     URL_lbl.Text = split[2];
                     Comment_lbl.Text = split[3];
                     break;
@@ -310,6 +312,8 @@ namespace _4_darbas
             URL_lbl.Text = null;
             Comment_lbl.Text = null;
             currentline = null;
+            passaword = null;
+            ShowPassword_btn.Text = "Parodyti slaptažodį";
         }
 
         private void DeletePassword_btn_Click(object sender, EventArgs e)
@@ -318,6 +322,7 @@ namespace _4_darbas
             {
                 File.WriteAllText(path + "\\Magic.txt", File.ReadAllText(path + "\\Magic.txt").Replace(currentline, ""));
                 ShowPassword_btn.Text = "Parodyti slaptažodį";
+                void NullLabel();
             }
             catch
             {
@@ -341,7 +346,7 @@ namespace _4_darbas
 
         private void RandomPassword_btn_Click(object sender, EventArgs e)
         {
-            
+
             var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
             var stringChars = new char[12];
             var random = new Random();
@@ -352,6 +357,12 @@ namespace _4_darbas
             }
 
             Password_txt.Text = new String(stringChars);
+        }
+
+        private void CopyPassword_btn_Click(object sender, EventArgs e)
+        {
+            if (passaword != null)
+                Clipboard.SetText(DecryptText(passaword));
         }
     }
 }
